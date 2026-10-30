@@ -1,0 +1,82 @@
+name: Browser smoke
+
+# The production build, started with production config against a PostgreSQL
+# built from drizzle/, driven by Chromium: health reports the database up,
+# discovery names the issuer it was given, and a real authorize request from a
+# registered app (Solon) lands on that app's sign-in page at phone width.
+# NODE_ENV=production, so config refuses dev defaults; NODE_ENV=test and TEST
+# stay unset, because better-auth skips its origin check under either.
+# The fleet rollout gate requires this workflow green on every consumer of a
+# shared package.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-smoke-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: signin
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app -d signin"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: postgres://app:app@127.0.0.1:5432/signin
+      SIGNIN_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: synthetic-browser-smoke-secret-at-least-32-chars
+      SIGNIN_PAIRWISE_SECRET: synthetic-browser-smoke-pairwise-at-least-32-chars
+      SIGNIN_CLIENT_SECRET_SOLON: synthetic-browser-smoke-client-at-least-32-chars
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      # NODE_ENV=production would skip devDependencies; install them anyway.
+      - run: NODE_ENV=development pnpm install --frozen-lockfile
+      - name: Schema from the committed migrations
+        run: for file in drizzle/[0-9]*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$file"; done
+      - run: pnpm exec playwright-core install --with-deps chromium
+      - run: pnpm run build
+      - name: Health, discovery, and an app's sign-in page in Chromium
+        run: |
+          set -euo pipefail
+          mkdir -p smoke-artifacts
+          pnpm run start --hostname 127.0.0.1 --port 3000 > "$RUNNER_TEMP/signin-server.log" 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3000/api/health; then break; fi
+            sleep 1
+          done
+          node scripts/smoke.mjs --base http://localhost:3000
+      - name: Server log
+        if: always()
+        run: cat "$RUNNER_TEMP/signin-server.log" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-smoke
+          path: smoke-artifacts/
+          if-no-files-found: ignore
