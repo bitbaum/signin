@@ -1,0 +1,25 @@
+name: Deploy
+
+# CI green on main -> deploy that exact commit to the box. All logic lives in
+# bitbaum/loki/.github/workflows/selfhost-deploy.yml (loki
+# docs/infrastructure/self-host-cd.md). `app:` is the apps.conf key.
+on:
+  workflow_dispatch: {}
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request')
+    uses: bitbaum/loki/.github/workflows/selfhost-deploy.yml@main
+    with:
+      app: signin
+      git-ref: ${{ github.event.workflow_run.head_sha }}
+    secrets:
+      HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
