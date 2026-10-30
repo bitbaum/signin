@@ -1,0 +1,30 @@
+{
+  "blocks": {
+    "identity": {
+      "package": "@bitbaum/accountkit",
+      "bindings": [
+        { "file": "lib/upstreams.ts", "symbols": ["placeholderEmail"] },
+        { "file": "lib/http.ts", "symbols": ["authBucket"] },
+        { "file": "test/accountkit-client.test.ts", "symbols": ["createAuthInstance", "signInMethods"] }
+      ],
+      "note": "This is the provider side of accountkit's `bitbaum-signin` client. accountkit's createAuthRuntime is a product's account system (password, link, passkeys); this service keeps no accounts of that kind, so it runs better-auth with @better-auth/oauth-provider and reuses accountkit's identity rule (placeholderEmail), its limits, and — in the tests — its real client runtime."
+    },
+    "rate-limits": {
+      "package": "limitkit",
+      "bindings": [{ "file": "lib/http.ts", "symbols": ["clientIp", "toHeaders"] }]
+    },
+    "design": {
+      "package": "@bitbaum/design-tokens",
+      "bindings": [{ "file": "app/globals.css" }]
+    },
+    "shell": {
+      "exception": "One screen with no navigation: a sitekit masthead and footer would be chrome around a list of provider buttons, and a footer link is a way out of a sign-in a person is in the middle of."
+    },
+    "publishing": {
+      "exception": "Infrastructure, not a product: there is no public roadmap, changelog or blog page here to render with bip-kit."
+    },
+    "chat": {
+      "exception": "The service has no chat surface of any kind; it renders a sign-in chooser and two notice pages."
+    }
+  }
+}

@@ -1,0 +1,46 @@
+@import "@bitbaum/design-tokens/tokens.css";
+@import "@bitbaum/accountkit/styles.css";
+
+/* No tokens are defined here; only compositions of the shared ones. */
+html {
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: hsl(var(--surface-page));
+  color: hsl(var(--text-primary));
+  font-family: var(--font-sans);
+  display: grid;
+  place-items: start center;
+}
+main {
+  width: 100%;
+  max-width: 24rem;
+  padding: 3rem 1rem;
+  box-sizing: border-box;
+}
+h1 {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+}
+p {
+  margin: 0 0 1.5rem;
+  color: hsl(var(--text-secondary));
+}
+.providers {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+}
+.providers button {
+  width: 100%;
+  min-height: 44px;
+}
+.small {
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: hsl(var(--text-tertiary));
+}
